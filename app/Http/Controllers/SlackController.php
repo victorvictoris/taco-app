@@ -34,6 +34,12 @@ class SlackController extends Controller
             if ($event['type'] === 'message' && !isset($event['subtype'])) {
                 return $this->processMessageEvent($event, $slackService, $eventId);
             }
+
+            // Dodavanje 'taco' reakcije
+            if ($event['type'] === 'reaction_added' && $event['reaction'] === 'taco') {
+                Log::info('tip reakcije taco');
+                return $this->processReactionAddedEvent($event, $slackService);
+            }
         }
 
         return response()->json(['status' => 'SlackEvent received']);
@@ -189,5 +195,62 @@ class SlackController extends Controller
             Taco::where('giver_id', $giver->id)->sum('number_of_given_tacos'), // Ukupno dodeljenih takosa
             $giver->remaining_tacos
         );
+    }
+
+    private function processReactionAddedEvent($event, SlackService $slackService)
+    {
+        Log::info('Usao u processReactionAddedEvent');
+        $giverSlackId = $event['user']; // Korisnik koji je dodao reakciju
+        $messageTs = $event['item']['ts']; // Timestamp originalne poruke
+
+        // Proveri originalnu poruku i uzmi oznacene korisnike
+        $originalMessage = $slackService->getMessage($event['item']['channel'], $messageTs);
+
+        if (empty($originalMessage['text'])) {
+            return response()->json(['status' => 'No message text found']);
+        }
+
+        preg_match_all('/<@(\w+)>/', $originalMessage['text'], $matches);
+
+        if (empty($matches[1])) {
+            $slackService->sendEphemeralMessage(
+                $event['item']['channel'],
+                $giverSlackId,
+                "🚫 Nema označenih korisnika za dodelu takosa."
+            );
+            return response()->json(['status' => 'No recipients found']);
+        }
+
+        // Provera da li davalac ima dovoljno takosa i dodela
+        $giver = $this->getUser($giverSlackId, $slackService);
+
+        if ($giver->remaining_tacos < count($matches[1])) {
+            $slackService->sendEphemeralMessage(
+                $event['item']['channel'],
+                $giver->slack_id,
+                "🚫 Nemaš dovoljno takosa! Imaš samo {$giver->remaining_tacos} takosa preostalih."
+            );
+            return response()->json(['status' => 'Not enough tacos']);
+        }
+
+        // Kreiraj ili dohvatimo SlackEvent zapis za ovaj event
+        $eventRecord = SlackEvent::firstOrCreate(['slack_event_id' => $event['event_ts']]);
+
+        foreach ($matches[1] as $receiverSlackId) {
+            // Proveri da li je davalac isti kao primalac
+            if ($receiverSlackId === $giverSlackId) {
+                $slackService->sendEphemeralMessage(
+                    $event['item']['channel'],
+                    $giver->slack_id,
+                    "🚫 Ne možeš dodati takos sebi! 🤦 🤦‍"
+                );
+                continue;
+            }
+
+            $receiver = $this->getUser($receiverSlackId, $slackService);
+            $this->assignTacos($giver, $receiver, 1, $originalMessage['text'], $slackService, $event['item']['channel'], $eventRecord->id);
+        }
+
+        return response()->json(['status' => 'Tacos assigned via reaction']);
     }
 }

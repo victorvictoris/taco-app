@@ -161,4 +161,22 @@ class SlackService
         return $data;
     }
 
+    public function getMessage($channel, $timestamp)
+    {
+        $response = Http::withToken($this->token)->get('https://slack.com/api/conversations.history', [
+            'channel' => $channel,
+            'latest' => $timestamp,
+            'limit' => 1,
+            'inclusive' => true
+        ]);
+
+        $data = $response->json();
+
+        if (!isset($data['messages'][0])) {
+            Log::error('Failed to fetch message', ['response' => $data]);
+            return null;
+        }
+
+        return $data['messages'][0];
+    }
 }

@@ -9,4 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote')->hourly();
 
 // Dodajemo dnevno zakazivanje za resetovanje takosa
-app(Schedule::class)->command('tacos:reset-count')->everyMinute();
+app(Schedule::class)->command('tacos:reset-count')->daily();
