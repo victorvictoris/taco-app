@@ -35,13 +35,14 @@ class SlackService
         ]);
 
         $data = $response->json();
-        //Log::info($data);
+        Log::info($data['user']);
 
         if ($data['ok']) {
             $user = $data['user'];
             return [
                 'name' => $user['real_name'] ?? 'Unknown',
                 'email' => $user['profile']['email'] ?? null,
+                'profile_picture' => $user['profile']['image_512'] ?? null
             ];
         }
 
