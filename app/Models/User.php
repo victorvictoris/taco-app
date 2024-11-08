@@ -23,7 +23,8 @@ class User extends Authenticatable
         'email',
         'password',
         'slack_id',
-        'remaining_tacos'
+        'remaining_tacos',
+        'profile_picture'
     ];
 
     /**

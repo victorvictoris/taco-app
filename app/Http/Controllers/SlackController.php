@@ -143,7 +143,8 @@ class SlackController extends Controller
                 'name' => $userInfo['name'] ?? 'Unknown User',
                 'email' => $userInfo['email'] ?? Str::random(10) . '@example.com',
                 'password' => Hash::make(Str::random(16)),
-                'remaining_tacos' => 5
+                'remaining_tacos' => 5,
+                'profile_picture' => $userInfo['profile_picture'] ?? null
             ]
         );
     }
