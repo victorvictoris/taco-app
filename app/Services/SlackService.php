@@ -62,10 +62,8 @@ class SlackService
         // Formiraj Leaderboard prikaz
         $leaderboardText = "";
         foreach ($leaderboard as $index => $user) {
-            $leaderboardText .= ($index + 1) . ". @" . $user->name . " - " . $user->received_tacos_sum_number_of_given_tacos . " 🌮\n";
+            $leaderboardText .= ($index + 1) . ". <@" . $user->slack_id . "> - " . $user->received_tacos_sum_number_of_given_tacos . " 🌮\n";
         }
-
-        //Log::info($leaderboardText);
 
         // Izgradi blokove za Home tab sa osnovnim informacijama i leaderboard-om
         $blocks = [
@@ -109,7 +107,7 @@ class SlackService
         ];
 
         // Ažuriraj Home tab korisnika
-        $response = Http::withToken($this->token)->post('https://slack.com/api/views.publish', [
+        Http::withToken($this->token)->post('https://slack.com/api/views.publish', [
             'user_id' => $userId,
             'view' => [
                 'type' => 'home',
@@ -117,7 +115,6 @@ class SlackService
             ]
         ]);
 
-        //Log::info($response);
     }
 
     public function sendDirectMessageToUser($userSlackId, $text)
